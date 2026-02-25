@@ -196,8 +196,8 @@ body {
   background: var(--surface); color: var(--text); border: 1px solid var(--border);
 }
 .btn-copy:active { background: var(--surface-hover); }
-.btn-mail { background: var(--accent); color: #fff; }
-.btn-mail:active { background: var(--accent-light); }
+.btn-submit { background: var(--green); color: #fff; }
+.btn-submit:active { background: var(--green-light); }
 .btn:disabled { opacity: 0.35; }
 
 /* ── Toast ── */
@@ -258,14 +258,6 @@ body {
   width: 100%; margin-top: 8px; border-radius: 4px;
   background: var(--surface);
 }
-.btn-share {
-  background: var(--green); color: #fff;
-  margin-top: 10px; width: 100%; padding: 14px; border-radius: 4px;
-  border: none; font-size: 16px; font-weight: 600; cursor: pointer;
-  transition: all 0.15s;
-}
-.btn-share:active { background: var(--green-light); }
-.btn-share:disabled { opacity: 0.35; }
 
 /* ── Kneeboard Overlay ── */
 .kb-overlay {
@@ -485,19 +477,18 @@ body {
     </div>
   </div>
   <audio class="audio-playback hidden" id="audio-playback" controls></audio>
-  <button class="btn-share hidden" id="btn-share" disabled>Share Recording</button>
 </div>
 
 <!-- Step 6: Preview & Send -->
 <div class="section hidden" id="preview-section">
-  <div class="section-title"><span class="step-num">6</span> Email Body Preview</div>
+  <div class="section-title"><span class="step-num">6</span> Debrief Summary</div>
   <div id="preview-box"></div>
 </div>
 
 <!-- Bottom buttons -->
 <div class="btn-bar">
   <button class="btn btn-copy" id="btn-copy" disabled>Copy Text</button>
-  <button class="btn btn-mail" id="btn-mail" disabled>Open in Mail</button>
+  <button class="btn btn-submit" id="btn-submit" disabled>Submit Debrief</button>
 </div>
 
 <div class="toast" id="toast">Copied</div>
@@ -790,7 +781,7 @@ function updateButtons() {
   const allHaveLegs = hasContent && crewWithForms.every(n => (crewLegs[n] || []).length > 0);
   const hasInstructor = !!document.getElementById('instructor-select').value;
   document.getElementById('btn-copy').disabled = !hasContent;
-  document.getElementById('btn-mail').disabled = !(hasContent && allHaveLegs && hasInstructor);
+  document.getElementById('btn-submit').disabled = !(hasContent && allHaveLegs && hasInstructor);
   // Show audio section when details are visible
   const detailsVisible = !document.getElementById('details-section').classList.contains('hidden');
   if (detailsVisible) {
@@ -834,12 +825,45 @@ document.getElementById('btn-copy').addEventListener('click', () => {
   });
 });
 
-document.getElementById('btn-mail').addEventListener('click', () => {
+document.getElementById('btn-submit').addEventListener('click', async () => {
   const body = buildBody();
-  const mailto = 'mailto:coulson.falcon@outlook.com'
-    + '?subject=' + encodeURIComponent('Debrief')
-    + '&body=' + encodeURIComponent(body);
-  window.location.href = mailto;
+  const instructor = getInstructorName();
+  const date = document.getElementById('input-date').value.trim() || 'debrief';
+
+  // If there's a recording, share audio + text via Web Share API
+  if (window._audioBlob) {
+    const fileName = 'Debrief_' + date.replace(/\s+/g, '_') + (instructor ? '_' + instructor.split(',')[0] : '') + '.m4a';
+    const file = new File([window._audioBlob], fileName, { type: window._audioBlob.type });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: 'Debrief Recording',
+          text: body,
+          files: [file]
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Share failed:', err);
+      }
+    } else {
+      // Fallback: download the audio file
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(window._audioBlob);
+      a.download = fileName;
+      a.click();
+    }
+  } else {
+    // No recording — copy text to clipboard as fallback
+    try {
+      await navigator.clipboard.writeText(body);
+      const toast = document.getElementById('toast');
+      toast.textContent = 'Copied — attach your recording manually';
+      toast.classList.add('show');
+      setTimeout(() => { toast.classList.remove('show'); toast.textContent = 'Copied'; }, 2500);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  }
 });
 
 // ── Kneeboard Data ──
@@ -1041,11 +1065,10 @@ document.getElementById('kb-next').addEventListener('click', function() { naviga
   const recStatus = document.getElementById('rec-status');
   const recTime = document.getElementById('rec-time');
   const audioPlayback = document.getElementById('audio-playback');
-  const btnShare = document.getElementById('btn-share');
-
   let mediaRecorder = null;
   let audioChunks = [];
   let audioBlob = null;
+  window._audioBlob = null;
   let recording = false;
   let timerInterval = null;
   let startTime = 0;
@@ -1090,11 +1113,10 @@ document.getElementById('kb-next').addEventListener('click', function() { naviga
       mediaRecorder.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
         audioBlob = new Blob(audioChunks, { type: mimeType });
+        window._audioBlob = audioBlob;
         const url = URL.createObjectURL(audioBlob);
         audioPlayback.src = url;
         audioPlayback.classList.remove('hidden');
-        btnShare.classList.remove('hidden');
-        btnShare.disabled = false;
       };
 
       mediaRecorder.start(1000);
@@ -1105,7 +1127,7 @@ document.getElementById('kb-next').addEventListener('click', function() { naviga
       recStatus.querySelector('div:first-child').textContent = 'Recording...';
       recTime.textContent = '00:00';
       audioPlayback.classList.add('hidden');
-      btnShare.classList.add('hidden');
+      window._audioBlob = null;
 
       // Show kneeboard overlay
       showKneeboard();
@@ -1128,32 +1150,6 @@ document.getElementById('kb-next').addEventListener('click', function() { naviga
     if (recording) btnRec.click();
   });
 
-  btnShare.addEventListener('click', async () => {
-    if (!audioBlob) return;
-
-    const instructor = getInstructorName();
-    const date = document.getElementById('input-date').value.trim() || 'debrief';
-    const fileName = 'Debrief_' + date.replace(/\s+/g, '_') + (instructor ? '_' + instructor.split(',')[0] : '') + '.m4a';
-    const file = new File([audioBlob], fileName, { type: audioBlob.type });
-
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          title: 'Debrief Recording',
-          text: buildBody(),
-          files: [file]
-        });
-      } catch (err) {
-        if (err.name !== 'AbortError') console.error('Share failed:', err);
-      }
-    } else {
-      // Fallback: download the file
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(audioBlob);
-      a.download = fileName;
-      a.click();
-    }
-  });
 })();
 </script>
 
