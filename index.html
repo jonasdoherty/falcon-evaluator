@@ -210,6 +210,62 @@ body {
 .toast.show { opacity: 1; }
 
 .hidden { display: none !important; }
+
+/* ── Instructor picker ── */
+.instructor-bar {
+  display: flex; align-items: center; gap: 10px;
+}
+.instructor-bar select {
+  flex: 1;
+}
+.instructor-saved {
+  font-size: 11px; color: var(--green-light); font-weight: 600;
+  opacity: 0; transition: opacity 0.3s;
+}
+.instructor-saved.show { opacity: 1; }
+
+/* ── Audio Recorder ── */
+.recorder-controls {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.btn-rec {
+  width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border);
+  background: var(--surface); cursor: pointer; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.btn-rec .rec-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #c0392b; transition: all 0.2s;
+}
+.btn-rec.recording .rec-dot {
+  width: 16px; height: 16px; border-radius: 3px;
+  background: #e74c3c;
+}
+.btn-rec.recording {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
+}
+.rec-status {
+  font-size: 13px; color: var(--text-secondary);
+}
+.rec-status .rec-time {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  color: var(--text); font-size: 14px;
+}
+.rec-status.recording .rec-time { color: #e74c3c; }
+.audio-playback {
+  width: 100%; margin-top: 8px; border-radius: 4px;
+  background: var(--surface);
+}
+.btn-share {
+  background: var(--green); color: #fff;
+  margin-top: 10px; width: 100%; padding: 10px; border-radius: 4px;
+  border: none; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-share:active { background: var(--green-light); }
+.btn-share:disabled { opacity: 0.35; }
 </style>
 </head>
 <body>
@@ -221,6 +277,25 @@ body {
       <div class="header-title">FALCON</div>
       <div class="header-sub">Evaluator</div>
     </div>
+  </div>
+</div>
+
+<!-- Instructor picker -->
+<div class="section" id="instructor-section">
+  <div class="section-title">Instructor</div>
+  <div class="instructor-bar">
+    <select class="text-input" id="instructor-select">
+      <option value="">Select instructor...</option>
+      <option value="travis.adams@coulsonaviationusa.com">Adams, Travis</option>
+      <option value="todd.davis@coulsonaviation.com">Davis, Todd</option>
+      <option value="jonas.doherty@coulsonaviationusa.com">Doherty, Jonas</option>
+      <option value="john.gallaher@coulsonaviationusa.com">Gallaher, John</option>
+      <option value="Greg.House@coulsonaviationusa.com">House, Greg</option>
+      <option value="Joshua.Kryzsko@coulsonaviation.com">Kryzsko, Joshua</option>
+      <option value="Mac.McEntire@coulsonaviation.com">McEntire, Cleatis</option>
+      <option value="Michael.Smith@coulsonaviation.com">Smith, Michael</option>
+    </select>
+    <span class="instructor-saved" id="instructor-saved">Saved</span>
   </div>
 </div>
 
@@ -271,9 +346,25 @@ body {
   </div>
 </div>
 
-<!-- Step 5: Preview & Send -->
+<!-- Step 5: Recording -->
+<div class="section hidden" id="audio-section">
+  <div class="section-title"><span class="step-num">5</span> Recording</div>
+  <div class="recorder-controls">
+    <button class="btn-rec" id="btn-rec" title="Record">
+      <div class="rec-dot"></div>
+    </button>
+    <div class="rec-status" id="rec-status">
+      <div>Tap to record debrief</div>
+      <div class="rec-time" id="rec-time"></div>
+    </div>
+  </div>
+  <audio class="audio-playback hidden" id="audio-playback" controls></audio>
+  <button class="btn-share hidden" id="btn-share" disabled>Share Recording</button>
+</div>
+
+<!-- Step 6: Preview & Send -->
 <div class="section hidden" id="preview-section">
-  <div class="section-title"><span class="step-num">5</span> Email Body Preview</div>
+  <div class="section-title"><span class="step-num">6</span> Email Body Preview</div>
   <div id="preview-box"></div>
 </div>
 
@@ -286,6 +377,13 @@ body {
 <div class="toast" id="toast">Copied</div>
 
 <script>
+// ── Restore saved instructor ──
+(function() {
+  const sel = document.getElementById('instructor-select');
+  const saved = localStorage.getItem('falcon_instructor');
+  if (saved) sel.value = saved;
+})();
+
 // ── Crew data ──
 const CREW = {
   "B-737": [
@@ -504,8 +602,16 @@ function renderForms() {
   });
 }
 
+function getInstructorName() {
+  const sel = document.getElementById('instructor-select');
+  if (!sel.value) return '';
+  return sel.options[sel.selectedIndex].text;
+}
+
 function buildBody() {
   let lines = [];
+  const instructor = getInstructorName();
+  if (instructor) lines.push('Instructor: ' + instructor);
   selectedCrew.forEach(name => {
     const forms = crewForms[name] || [];
     if (forms.length > 0) {
@@ -535,8 +641,16 @@ function updateButtons() {
   const crewWithForms = Array.from(selectedCrew).filter(n => (crewForms[n] || []).length > 0);
   const hasContent = crewWithForms.length > 0;
   const allHaveLegs = hasContent && crewWithForms.every(n => (crewLegs[n] || []).length > 0);
+  const hasInstructor = !!document.getElementById('instructor-select').value;
   document.getElementById('btn-copy').disabled = !hasContent;
-  document.getElementById('btn-mail').disabled = !(hasContent && allHaveLegs);
+  document.getElementById('btn-mail').disabled = !(hasContent && allHaveLegs && hasInstructor);
+  // Show audio section when details are visible
+  const detailsVisible = !document.getElementById('details-section').classList.contains('hidden');
+  if (detailsVisible) {
+    document.getElementById('audio-section').classList.remove('hidden');
+  } else {
+    document.getElementById('audio-section').classList.add('hidden');
+  }
 }
 
 ['input-date','input-tail','input-fire'].forEach(id => {
@@ -549,6 +663,20 @@ function updateButtons() {
   document.getElementById('input-date').value = months[now.getMonth()] + ' ' + now.getDate();
   updatePreview();
 })();
+
+// ── Instructor picker change handler ──
+document.getElementById('instructor-select').addEventListener('change', function() {
+  if (this.value) {
+    localStorage.setItem('falcon_instructor', this.value);
+    const badge = document.getElementById('instructor-saved');
+    badge.classList.add('show');
+    setTimeout(() => badge.classList.remove('show'), 1500);
+  } else {
+    localStorage.removeItem('falcon_instructor');
+  }
+  updatePreview();
+  updateButtons();
+});
 
 document.getElementById('btn-copy').addEventListener('click', () => {
   const body = buildBody();
@@ -566,6 +694,115 @@ document.getElementById('btn-mail').addEventListener('click', () => {
     + '&body=' + encodeURIComponent(body);
   window.location.href = mailto;
 });
+
+// ── Audio Recorder ──
+(function() {
+  const btnRec = document.getElementById('btn-rec');
+  const recStatus = document.getElementById('rec-status');
+  const recTime = document.getElementById('rec-time');
+  const audioPlayback = document.getElementById('audio-playback');
+  const btnShare = document.getElementById('btn-share');
+
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let audioBlob = null;
+  let recording = false;
+  let timerInterval = null;
+  let startTime = 0;
+
+  function formatTime(ms) {
+    const secs = Math.floor(ms / 1000);
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  btnRec.addEventListener('click', async () => {
+    if (recording) {
+      // Stop recording
+      mediaRecorder.stop();
+      recording = false;
+      btnRec.classList.remove('recording');
+      recStatus.classList.remove('recording');
+      clearInterval(timerInterval);
+      recStatus.querySelector('div:first-child').textContent = 'Recording saved';
+      return;
+    }
+
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      audioBlob = null;
+
+      // Use mp4 on iOS Safari, webm elsewhere
+      const mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4'
+        : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+      mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        audioBlob = new Blob(audioChunks, { type: mimeType });
+        const url = URL.createObjectURL(audioBlob);
+        audioPlayback.src = url;
+        audioPlayback.classList.remove('hidden');
+        btnShare.classList.remove('hidden');
+        btnShare.disabled = false;
+      };
+
+      mediaRecorder.start(1000);
+      recording = true;
+      startTime = Date.now();
+      btnRec.classList.add('recording');
+      recStatus.classList.add('recording');
+      recStatus.querySelector('div:first-child').textContent = 'Recording...';
+      recTime.textContent = '00:00';
+      audioPlayback.classList.add('hidden');
+      btnShare.classList.add('hidden');
+
+      timerInterval = setInterval(() => {
+        recTime.textContent = formatTime(Date.now() - startTime);
+      }, 500);
+
+    } catch (err) {
+      recStatus.querySelector('div:first-child').textContent = 'Microphone access denied';
+      console.error('Mic error:', err);
+    }
+  });
+
+  btnShare.addEventListener('click', async () => {
+    if (!audioBlob) return;
+
+    const instructor = getInstructorName();
+    const date = document.getElementById('input-date').value.trim() || 'debrief';
+    const fileName = 'Debrief_' + date.replace(/\s+/g, '_') + (instructor ? '_' + instructor.split(',')[0] : '') + '.m4a';
+    const file = new File([audioBlob], fileName, { type: audioBlob.type });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: 'Debrief Recording',
+          text: buildBody(),
+          files: [file]
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Share failed:', err);
+      }
+    } else {
+      // Fallback: download the file
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(audioBlob);
+      a.download = fileName;
+      a.click();
+    }
+  });
+})();
 </script>
 
 </body>
