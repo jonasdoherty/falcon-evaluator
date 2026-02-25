@@ -179,23 +179,22 @@ body {
   min-height: 60px; border: 1px solid var(--border);
 }
 
-/* ── Bottom buttons ── */
+/* ── Bottom button ── */
 .btn-bar {
   position: fixed; bottom: 0; left: 0; right: 0;
-  padding: 12px 16px; background: rgba(18, 18, 20, 0.92);
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(18, 18, 20, 0.95);
   border-top: 1px solid var(--border);
-  display: flex; gap: 10px;
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  z-index: 50;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 .btn {
-  flex: 1; padding: 14px; border-radius: 4px; border: none;
-  font-size: 16px; font-weight: 600; cursor: pointer;
+  width: 100%; padding: 16px; border-radius: 4px; border: none;
+  font-size: 18px; font-weight: 600; cursor: pointer;
   transition: all 0.15s;
 }
-.btn-copy {
-  background: var(--surface); color: var(--text); border: 1px solid var(--border);
-}
-.btn-copy:active { background: var(--surface-hover); }
 .btn-submit { background: var(--green); color: #fff; }
 .btn-submit:active { background: var(--green-light); }
 .btn:disabled { opacity: 0.35; }
@@ -487,7 +486,6 @@ body {
 
 <!-- Bottom buttons -->
 <div class="btn-bar">
-  <button class="btn btn-copy" id="btn-copy" disabled>Copy Text</button>
   <button class="btn btn-submit" id="btn-submit" disabled>Submit Debrief</button>
 </div>
 
@@ -780,7 +778,6 @@ function updateButtons() {
   const hasContent = crewWithForms.length > 0;
   const allHaveLegs = hasContent && crewWithForms.every(n => (crewLegs[n] || []).length > 0);
   const hasInstructor = !!document.getElementById('instructor-select').value;
-  document.getElementById('btn-copy').disabled = !hasContent;
   document.getElementById('btn-submit').disabled = !(hasContent && allHaveLegs && hasInstructor);
   // Show audio section when details are visible
   const detailsVisible = !document.getElementById('details-section').classList.contains('hidden');
@@ -814,15 +811,6 @@ document.getElementById('instructor-select').addEventListener('change', function
   }
   updatePreview();
   updateButtons();
-});
-
-document.getElementById('btn-copy').addEventListener('click', () => {
-  const body = buildBody();
-  navigator.clipboard.writeText(body).then(() => {
-    const toast = document.getElementById('toast');
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 1500);
-  });
 });
 
 document.getElementById('btn-submit').addEventListener('click', async () => {
