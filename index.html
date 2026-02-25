@@ -257,6 +257,31 @@ body {
   width: 100%; margin-top: 8px; border-radius: 4px;
   background: var(--surface);
 }
+.audio-or {
+  display: flex; align-items: center; gap: 12px; margin: 12px 0;
+  color: var(--text-secondary); font-size: 13px; text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.audio-or::before, .audio-or::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.btn-attach {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 4px; font-size: 15px; font-weight: 600;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  cursor: pointer; transition: all 0.15s; width: 100%;
+}
+.btn-attach:active { background: var(--surface-hover); }
+.btn-attach.has-file {
+  border-color: var(--accent); background: var(--accent-glow);
+}
+.btn-attach .attach-icon { font-size: 18px; }
+.btn-attach .attach-label { flex: 1; }
+.btn-attach .attach-clear {
+  font-size: 13px; color: var(--text-secondary); padding: 2px 6px;
+  border-radius: 3px; background: var(--bg);
+}
+.btn-attach.has-file .attach-clear:active { background: var(--surface-hover); }
 
 /* ── Kneeboard Overlay ── */
 .kb-overlay {
@@ -446,7 +471,7 @@ body {
   <div class="input-row">
     <div class="field">
       <label>Date</label>
-      <input type="text" class="text-input" id="input-date" placeholder="e.g., Jan 15">
+      <input type="date" class="text-input" id="input-date">
     </div>
     <div class="field">
       <label>Aircraft / Tail</label>
@@ -476,6 +501,12 @@ body {
     </div>
   </div>
   <audio class="audio-playback hidden" id="audio-playback" controls></audio>
+  <div class="audio-or">or</div>
+  <input type="file" id="audio-file-input" accept=".m4a,.mp3,.wav,.mp4,.ogg,.webm,.flac,.aac" style="display:none">
+  <button class="btn-attach" id="btn-attach" type="button">
+    <span class="attach-icon">&#128206;</span>
+    <span class="attach-label">Attach voice memo file</span>
+  </button>
 </div>
 
 <!-- Step 6: Preview & Send -->
@@ -1146,6 +1177,47 @@ document.getElementById('kb-next').addEventListener('click', function() { naviga
   // Overlay stop button triggers main record toggle
   document.getElementById('kb-stop').addEventListener('click', () => {
     if (recording) btnRec.click();
+  });
+
+  // ── Attach voice memo file ──
+  const fileInput = document.getElementById('audio-file-input');
+  const btnAttach = document.getElementById('btn-attach');
+
+  btnAttach.addEventListener('click', () => {
+    // If a file is already attached and user taps the clear button area, clear it
+    if (btnAttach.classList.contains('has-file') && event.target.closest('.attach-clear')) {
+      fileInput.value = '';
+      window._audioBlob = null;
+      audioPlayback.src = '';
+      audioPlayback.classList.add('hidden');
+      btnAttach.classList.remove('has-file');
+      btnAttach.querySelector('.attach-label').textContent = 'Attach voice memo file';
+      btnAttach.querySelector('.attach-clear').remove();
+      return;
+    }
+    if (btnAttach.classList.contains('has-file')) return;
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    window._audioBlob = file;
+    const url = URL.createObjectURL(file);
+    audioPlayback.src = url;
+    audioPlayback.classList.remove('hidden');
+
+    btnAttach.classList.add('has-file');
+    btnAttach.querySelector('.attach-label').textContent = file.name;
+    // Add clear button
+    const clear = document.createElement('span');
+    clear.className = 'attach-clear';
+    clear.textContent = '✕';
+    btnAttach.appendChild(clear);
+
+    recStatus.querySelector('div:first-child').textContent = 'File attached';
+    recTime.textContent = '';
   });
 
 })();
