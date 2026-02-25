@@ -266,6 +266,132 @@ body {
 }
 .btn-share:active { background: var(--green-light); }
 .btn-share:disabled { opacity: 0.35; }
+
+/* ── Kneeboard Overlay ── */
+.kb-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+}
+.kb-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: var(--surface);
+  border-bottom: 2px solid #e74c3c;
+  flex-shrink: 0;
+}
+.kb-rec-indicator {
+  display: flex; align-items: center; gap: 8px;
+}
+.kb-rec-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #e74c3c;
+  animation: kb-pulse 1s ease-in-out infinite;
+}
+@keyframes kb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.kb-rec-label {
+  font-size: 12px; font-weight: 700; color: #e74c3c;
+  letter-spacing: 2px;
+}
+.kb-rec-timer {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 16px; font-weight: 600; color: var(--text);
+}
+.kb-stop-btn {
+  padding: 8px 20px; border-radius: 4px; border: none;
+  background: #e74c3c; color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  letter-spacing: 1px;
+}
+.kb-stop-btn:active { background: #c0392b; }
+.kb-card-area {
+  flex: 1; overflow-y: auto; padding: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+.kb-card-title {
+  font-size: 22px; font-weight: 700; color: var(--accent-light);
+  margin-bottom: 2px;
+}
+.kb-card-subtitle {
+  font-size: 15px; color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.kb-meta {
+  font-size: 14px; color: var(--accent-light); font-weight: 600;
+  margin-bottom: 16px; padding: 8px 12px;
+  background: var(--accent-glow); border-radius: 4px;
+  display: inline-block;
+}
+.kb-section {
+  margin-bottom: 14px; padding: 12px 14px;
+  background: var(--surface); border-radius: 4px;
+  border-left: 3px solid var(--accent);
+}
+.kb-section-head {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  margin-bottom: 4px;
+}
+.kb-section-items {
+  font-size: 15px; color: var(--text-secondary); line-height: 1.6;
+}
+.kb-prompt {
+  font-size: 17px; line-height: 1.6; color: var(--text);
+  padding: 16px; background: var(--surface); border-radius: 4px;
+  border-left: 3px solid var(--green-light);
+  margin-bottom: 16px;
+}
+.kb-hint {
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.kb-crew-list {
+  font-size: 15px; color: var(--text); line-height: 1.7;
+  padding: 12px 14px; background: var(--surface); border-radius: 4px;
+  margin-bottom: 16px;
+}
+.kb-tips {
+  margin-top: 14px; padding: 12px 14px;
+  background: var(--surface); border-radius: 4px;
+  border-left: 3px solid var(--green);
+  font-size: 14px; color: var(--text-secondary); line-height: 1.6;
+}
+.kb-tips-title {
+  font-weight: 700; color: var(--text); margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.kb-note {
+  font-size: 14px; color: var(--text-secondary); font-style: italic;
+  margin-top: 12px; padding: 10px 14px;
+  background: var(--accent-glow); border-radius: 4px; line-height: 1.5;
+}
+.kb-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.kb-nav-btn {
+  width: 44px; height: 44px; border-radius: 4px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 16px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.kb-nav-btn:active { background: var(--surface-hover); }
+.kb-nav-btn:disabled { opacity: 0.25; }
+.kb-nav-center { text-align: center; }
+.kb-dots {
+  display: flex; gap: 6px; justify-content: center; margin-bottom: 4px;
+}
+.kb-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border); transition: background 0.2s;
+}
+.kb-dot.active { background: var(--accent-light); }
+.kb-page {
+  font-size: 11px; color: var(--text-secondary);
+}
 </style>
 </head>
 <body>
@@ -375,6 +501,27 @@ body {
 </div>
 
 <div class="toast" id="toast">Copied</div>
+
+<!-- Kneeboard overlay -->
+<div class="kb-overlay hidden" id="kb-overlay">
+  <div class="kb-top">
+    <div class="kb-rec-indicator">
+      <span class="kb-rec-dot"></span>
+      <span class="kb-rec-label">REC</span>
+      <span class="kb-rec-timer" id="kb-timer">00:00</span>
+    </div>
+    <button class="kb-stop-btn" id="kb-stop">Stop</button>
+  </div>
+  <div class="kb-card-area" id="kb-card-content"></div>
+  <div class="kb-nav">
+    <button class="kb-nav-btn" id="kb-prev" disabled>&#9664;</button>
+    <div class="kb-nav-center">
+      <div class="kb-dots" id="kb-dots"></div>
+      <div class="kb-page" id="kb-page">1 of 1</div>
+    </div>
+    <button class="kb-nav-btn" id="kb-next">&#9654;</button>
+  </div>
+</div>
 
 <script>
 // ── Restore saved instructor ──
@@ -695,6 +842,208 @@ document.getElementById('btn-mail').addEventListener('click', () => {
   window.location.href = mailto;
 });
 
+// ── Kneeboard Data ──
+const KB_DATA = {
+  "Exhibit 19": {
+    title: "Exhibit 19",
+    subtitle: "Airtanker Training/Evaluation Record",
+    meta: "PIC & SIC (same form) — 30 topics",
+    sections: [
+      ["I — Preflight Knowledge", "Records/Certs/Documents, Incident Organization, Mission Weather/Incident/Flight Info, Special Use Mission Equipment (RADS/Tank), FM Radio Operation, GPS Operation, Initial Dispatch Processing"],
+      ["II — Enroute", "Flight Following"],
+      ["III — Mountain / Low Level", "Terrain Avoidance, Below 500' AGL"],
+      ["V — Tactical Coordination", "Lead Plane Integration (following lead's line, show-me passes, comms), Multi-Aircraft Deconfliction (sequencing, orbit/hold discipline, traffic awareness), Air Attack/ATGS Coordination (taking direction, requesting clarification)"],
+      ["VI — Fire Airspace", "FTA Procedures, On Scene/Over-Incident Procedures, Fire Knowledge"],
+      ["VIII — Airtanker Ops", "Tanker Ground Ops, Maneuvering & Drop Procedures, Emergency/Abnormal Ops, SAFECOM"],
+      ["XVII — Facility", "Gov't Facility Parking, Maintenance, Aircraft Security"],
+      ["XVIII — Fundamentals", "Checklist Discipline, Aircraft Handling/Flight Parameters, Situational Awareness, Safety/Judgment/ADM"]
+    ],
+    tips: ["For multi-crew: name the crew member when giving feedback", "Only mention what needs discussion or coaching", "If something went well, say so briefly. Skip topics with nothing to discuss."]
+  },
+  "OPC PIC": {
+    title: "OPC — Pilot in Command",
+    subtitle: "Operational Proficiency Check",
+    meta: "31 items, 4 sections",
+    sections: [
+      ["Flight Ops (1–4)", "Preflight/Walkaround, Taxi/Ground Ops, Normal Takeoff, Landing"],
+      ["Mission Readiness (5–12)", "Mission Planning, W&B/Performance, FM/AM Radio, Flight Following, FTA Procedures, Briefings, FTA Comms, Join-Up"],
+      ["Technical Mission (13–24)", "Low-Level Handling, Terrain Awareness, Drop Pattern/Profile, Airspeed Control, Drop Accuracy, Exits/Go-Around, Lead Utilization, Energy-State, Fuel Mgmt, RADS/Tank, Tactics & Strategy, Emergency/Non-Normal"],
+      ["Non-Technical (25–31)", "Communication, SA, Decision Making, TEM, CRM, Workload/Task Mgmt, Fatigue/Personal Risk"]
+    ],
+    note: "OPC adds line ops (preflight, taxi, takeoff, landing) that Exhibit 19 doesn't cover. If doing both — one debrief covers both, just mention the line ops items too."
+  },
+  "OPC SIC": {
+    title: "OPC — Second in Command",
+    subtitle: "Operational Proficiency Check",
+    meta: "24 items, 4 sections",
+    sections: [
+      ["Flight Ops (1–4)", "Preflight/Walkaround, Taxi/Ground Ops, Normal Takeoff, Landing"],
+      ["Mission Readiness (5–9)", "Mission Planning, W&B/Performance, FM/AM Radio, Flight Following, FTA Procedures"],
+      ["Technical Mission (10–17)", "Low-Level Handling, Terrain Awareness, Energy-State, Hazard ID, Fuel Mgmt, Load Jettison, Tactics & Strategy, Emergency/Non-Normal"],
+      ["Non-Technical (18–24)", "Communication, SA, Decision Making, TEM, CRM, Workload/Task Mgmt, Fatigue/Personal Risk"]
+    ]
+  },
+  "OPC FE": {
+    title: "OPC — Flight Engineer",
+    subtitle: "Operational Proficiency Check",
+    meta: "21 items, 3 sections",
+    sections: [
+      ["Mission Readiness (1–6)", "Preflight/Systems Check, Mission Planning, W&B/Performance, FM/AM Radio, Flight Following, FTA Procedures"],
+      ["Technical Mission (7–14)", "Powerplant Monitoring, Fuel System Mgmt, RADS/Tank, Aircraft Systems Monitoring, Energy-State, Hazard ID, Load Jettison, Emergency/Non-Normal"],
+      ["Non-Technical (15–21)", "Communication, SA, Decision Making, TEM, CRM, Workload/Task Mgmt, Fatigue/Personal Risk"]
+    ],
+    note: "FE has unique items (Powerplant, Fuel System, Systems Monitoring) — address FE performance specifically."
+  },
+  "Line Check PIC": {
+    title: "Line Check — Pilot in Command",
+    subtitle: "Line Operations Evaluation",
+    meta: "23 items, 6 sections",
+    sections: [
+      ["Pre-Flight/Ground (1–4)", "Pre-Flight Prep, Flight Deck Setup, Departure Briefing, Taxi/Ground Ops"],
+      ["Takeoff/Departure (5–6)", "Takeoff Procedures & Callouts, SOP Compliance—Departure"],
+      ["In-Flight/Cruise (7–10)", "Altitude/Track Keeping, ATC Comms, Crew Coordination, RADS/Tank Mgmt"],
+      ["Approach/Landing (11–15)", "Approach Briefing, Approach Procedures & Callouts, Stabilized Approach, Landing Technique, SOP Compliance—Approach"],
+      ["Post-Flight (16–17)", "Shutdown/Securing, Post-Flight Documentation/EFL"],
+      ["Non-Technical/CRM (18–23)", "Communication, SA, CRM, Workload/Task Mgmt, Leadership & Team Coord, Standard Callouts & Cross-Checks"]
+    ],
+    note: "PIC uniquely includes 'Leadership & Team Coordination' — speak to how the PIC led the crew. Covers: positioning, reload cycles, training sorties, or fire missions — state the type of operation."
+  },
+  "Line Check SIC": {
+    title: "Line Check — Second in Command",
+    subtitle: "Line Operations Evaluation",
+    meta: "22 items, 6 sections",
+    sections: [
+      ["Pre-Flight/Ground (1–4)", "Pre-Flight Prep, Flight Deck Setup, Departure Briefing, Taxi/Ground Ops"],
+      ["Takeoff/Departure (5–6)", "Takeoff Procedures & Callouts, SOP Compliance—Departure"],
+      ["In-Flight/Cruise (7–10)", "Altitude/Track Keeping, ATC Comms, Crew Coordination, RADS/Tank"],
+      ["Approach/Landing (11–15)", "Approach Briefing, Approach Procedures & Callouts, Stabilized Approach, Landing Technique, SOP Compliance—Approach"],
+      ["Post-Flight (16–17)", "Shutdown/Securing, Post-Flight Documentation/EFL"],
+      ["Non-Technical/CRM (18–22)", "Communication, SA, CRM, Workload/Task Mgmt, Standard Callouts & Cross-Checks"]
+    ]
+  },
+  "Line Check FE": {
+    title: "Line Check — Flight Engineer",
+    subtitle: "Line Operations Evaluation",
+    meta: "19 items, 6 sections",
+    sections: [
+      ["Pre-Flight/Ground (1–3)", "Pre-Flight Prep, Preflight/Systems Check, Flight Deck Setup"],
+      ["Takeoff/Departure (4–5)", "Takeoff Procedures & Callouts, SOP Compliance—Departure"],
+      ["In-Flight/Cruise (6–10)", "Fuel System Mgmt, Powerplant Monitoring, Aircraft Systems, RADS/Tank Mgmt, Crew Coordination"],
+      ["Approach/Landing (11–12)", "Systems Config—Approach, SOP Compliance—Approach"],
+      ["Post-Flight (13–14)", "Shutdown/Securing, Post-Flight Documentation/EFL"],
+      ["Non-Technical/CRM (15–19)", "Communication, SA, CRM, Workload/Task Mgmt, Standard Callouts & Cross-Checks"]
+    ]
+  }
+};
+
+// ── Kneeboard Overlay ──
+let kbCards = [];
+let kbIndex = 0;
+
+function getSelectedFormTypes() {
+  const forms = new Set();
+  selectedCrew.forEach(name => {
+    (crewForms[name] || []).forEach(f => forms.add(f));
+  });
+  return Array.from(forms);
+}
+
+function buildIntroCard() {
+  const date = document.getElementById('input-date').value.trim() || '[DATE]';
+  const tail = document.getElementById('input-tail').value.trim() || '[AIRCRAFT]';
+  const fire = document.getElementById('input-fire').value.trim() || '[FIRE NAME]';
+  let crewLines = [];
+  selectedCrew.forEach(name => {
+    const forms = crewForms[name] || [];
+    if (forms.length) crewLines.push('<strong>' + name + '</strong>: ' + forms.join(', '));
+  });
+  return {
+    title: 'Start Your Debrief',
+    html: '<div class="kb-prompt">"We are debriefing the flight that took place on <strong>' + date +
+      '</strong> in <strong>' + tail + '</strong> over the <strong>' + fire + '</strong>."</div>' +
+      '<div class="kb-hint">State crew names, roles, and forms:</div>' +
+      '<div class="kb-crew-list">' + crewLines.join('<br>') + '</div>' +
+      '<div class="kb-tips"><div class="kb-tips-title">Tips</div>' +
+      '<div>\u2022 Name crew members when giving feedback</div>' +
+      '<div>\u2022 Be specific: speeds, altitudes, drop numbers</div>' +
+      '<div>\u2022 Skip topics with nothing to discuss</div>' +
+      '<div>\u2022 The AI handles all scoring \u2014 just describe what you saw</div></div>'
+  };
+}
+
+function buildFormCard(formType) {
+  const d = KB_DATA[formType];
+  if (!d) return null;
+  let html = '';
+  if (d.meta) html += '<div class="kb-meta">' + d.meta + '</div>';
+  d.sections.forEach(function(s) {
+    html += '<div class="kb-section"><div class="kb-section-head">' + s[0] +
+      '</div><div class="kb-section-items">' + s[1] + '</div></div>';
+  });
+  if (d.note) html += '<div class="kb-note">' + d.note + '</div>';
+  if (d.tips) {
+    html += '<div class="kb-tips">';
+    d.tips.forEach(function(t) { html += '<div>\u2022 ' + t + '</div>'; });
+    html += '</div>';
+  }
+  return { title: d.title, subtitle: d.subtitle, html: html };
+}
+
+function showKneeboard() {
+  const formTypes = getSelectedFormTypes();
+  kbCards = [buildIntroCard()];
+  formTypes.forEach(function(ft) {
+    var card = buildFormCard(ft);
+    if (card) kbCards.push(card);
+  });
+  kbIndex = 0;
+  renderKneeboardCard();
+  document.getElementById('kb-overlay').classList.remove('hidden');
+}
+
+function hideKneeboard() {
+  document.getElementById('kb-overlay').classList.add('hidden');
+}
+
+function navigateKneeboard(dir) {
+  kbIndex = Math.max(0, Math.min(kbCards.length - 1, kbIndex + dir));
+  renderKneeboardCard();
+}
+
+function renderKneeboardCard() {
+  var card = kbCards[kbIndex];
+  var container = document.getElementById('kb-card-content');
+  var html = '<div class="kb-card-title">' + card.title + '</div>';
+  if (card.subtitle) html += '<div class="kb-card-subtitle">' + card.subtitle + '</div>';
+  html += card.html;
+  container.innerHTML = html;
+  document.getElementById('kb-page').textContent = (kbIndex + 1) + ' of ' + kbCards.length;
+  document.getElementById('kb-prev').disabled = kbIndex === 0;
+  document.getElementById('kb-next').disabled = kbIndex === kbCards.length - 1;
+  var dots = document.getElementById('kb-dots');
+  dots.innerHTML = kbCards.map(function(_, i) {
+    return '<span class="kb-dot' + (i === kbIndex ? ' active' : '') + '"></span>';
+  }).join('');
+  container.scrollTop = 0;
+}
+
+// Kneeboard nav buttons
+document.getElementById('kb-prev').addEventListener('click', function() { navigateKneeboard(-1); });
+document.getElementById('kb-next').addEventListener('click', function() { navigateKneeboard(1); });
+
+// Kneeboard swipe support
+(function() {
+  var area = document.getElementById('kb-card-content');
+  var startX = 0;
+  area.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+  area.addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) navigateKneeboard(dx > 0 ? -1 : 1);
+  });
+})();
+
 // ── Audio Recorder ──
 (function() {
   const btnRec = document.getElementById('btn-rec');
@@ -725,6 +1074,7 @@ document.getElementById('btn-mail').addEventListener('click', () => {
       btnRec.classList.remove('recording');
       recStatus.classList.remove('recording');
       clearInterval(timerInterval);
+      hideKneeboard();
       recStatus.querySelector('div:first-child').textContent = 'Recording saved';
       return;
     }
@@ -766,14 +1116,25 @@ document.getElementById('btn-mail').addEventListener('click', () => {
       audioPlayback.classList.add('hidden');
       btnShare.classList.add('hidden');
 
+      // Show kneeboard overlay
+      showKneeboard();
+
       timerInterval = setInterval(() => {
-        recTime.textContent = formatTime(Date.now() - startTime);
+        var t = formatTime(Date.now() - startTime);
+        recTime.textContent = t;
+        var kbTimer = document.getElementById('kb-timer');
+        if (kbTimer) kbTimer.textContent = t;
       }, 500);
 
     } catch (err) {
       recStatus.querySelector('div:first-child').textContent = 'Microphone access denied';
       console.error('Mic error:', err);
     }
+  });
+
+  // Overlay stop button triggers main record toggle
+  document.getElementById('kb-stop').addEventListener('click', () => {
+    if (recording) btnRec.click();
   });
 
   btnShare.addEventListener('click', async () => {
