@@ -92,13 +92,14 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 .crew-item {
-  display: flex; flex-direction: column; gap: 0;
+  display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; border-radius: 4px; background: var(--surface);
   border: 1px solid transparent; font-size: 16px;
   transition: all 0.15s;
 }
 .crew-item .crew-top {
   display: flex; align-items: center; gap: 10px; cursor: pointer;
+  flex-shrink: 0;
 }
 .crew-item .crew-top:active { opacity: 0.7; }
 .crew-item.checked { background: var(--accent-glow); border-color: var(--accent); }
@@ -143,8 +144,8 @@ body {
 
 /* ── Role pills (PIC/SIC/FE next to crew name) ── */
 .role-row {
-  display: flex; align-items: center; gap: 5px; margin-top: 6px;
-  padding-left: 32px;
+  display: flex; align-items: center; gap: 4px;
+  margin-left: auto;
 }
 .role-pill {
   padding: 4px 10px; border-radius: 3px; font-size: 12px; font-weight: 700;
@@ -193,6 +194,8 @@ body {
   font-size: 16px; outline: none;
 }
 .text-input:focus { border-color: var(--accent); }
+.text-input.suggested { color: var(--text-secondary); font-style: italic; }
+.text-input.suggested:focus { color: var(--text); font-style: normal; }
 
 /* ── Preview ── */
 #preview-box {
@@ -248,10 +251,12 @@ body {
 
 /* ── Audio Recorder ── */
 .recorder-controls {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 8px; margin-bottom: 10px;
+  padding: 14px; background: var(--surface); border-radius: 8px;
 }
 .btn-rec {
-  width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border);
+  width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--border);
   background: var(--surface); cursor: pointer; position: relative;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
@@ -466,7 +471,7 @@ body {
 
 <!-- Step 1: Aircraft -->
 <div class="section">
-  <div class="section-title"><span class="step-num">1</span> Aircraft</div>
+  <div class="section-title"><span class="step-num">1</span> Aircraft Type</div>
   <div class="pill-group" id="aircraft-pills">
     <div class="pill" data-ac="B-737">B-737</div>
     <div class="pill" data-ac="C-130">C-130</div>
@@ -483,7 +488,7 @@ body {
       <input type="date" class="text-input" id="input-date">
     </div>
     <div class="field">
-      <label>Aircraft / Tail</label>
+      <label>Call Sign / Registration</label>
       <select class="text-input" id="input-tail">
         <option value="">Select tail...</option>
       </select>
@@ -904,6 +909,39 @@ function updateButtons() {
 ['input-date','input-tail','input-fire'].forEach(id => {
   document.getElementById(id).addEventListener('input', updatePreview);
 });
+
+// ── Fire name persistence ──
+(function() {
+  const fireInput = document.getElementById('input-fire');
+  const savedFire = localStorage.getItem('falcon_fire');
+
+  // Restore as dimmed suggestion
+  if (savedFire) {
+    fireInput.value = savedFire;
+    fireInput.classList.add('suggested');
+  }
+
+  // On focus: confirm the suggestion (remove dimming)
+  fireInput.addEventListener('focus', () => {
+    fireInput.classList.remove('suggested');
+  });
+
+  // On blur: save current value; if cleared, remove suggestion
+  fireInput.addEventListener('blur', () => {
+    const val = fireInput.value.trim();
+    if (val) {
+      localStorage.setItem('falcon_fire', val);
+    } else {
+      localStorage.removeItem('falcon_fire');
+    }
+  });
+
+  // Save on every keystroke too
+  fireInput.addEventListener('input', () => {
+    const val = fireInput.value.trim();
+    if (val) localStorage.setItem('falcon_fire', val);
+  });
+})();
 
 (function() {
   const now = new Date();
