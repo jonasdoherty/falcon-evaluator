@@ -88,16 +88,19 @@ body {
 /* ── Crew checkboxes ── */
 .crew-grid {
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: 6px; max-height: 320px; overflow-y: auto;
+  gap: 6px; max-height: 400px; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 .crew-item {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; flex-direction: column; gap: 0;
   padding: 10px 12px; border-radius: 4px; background: var(--surface);
-  border: 1px solid transparent; cursor: pointer; font-size: 16px;
+  border: 1px solid transparent; font-size: 16px;
   transition: all 0.15s;
 }
-.crew-item:active { background: var(--surface-hover); }
+.crew-item .crew-top {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
+.crew-item .crew-top:active { opacity: 0.7; }
 .crew-item.checked { background: var(--accent-glow); border-color: var(--accent); }
 .crew-item input[type="checkbox"] { display: none; }
 .crew-check {
@@ -135,6 +138,24 @@ body {
   background: var(--green); border-color: var(--green-light); color: #fff;
 }
 .form-tag.taken {
+  opacity: 0.25; pointer-events: none; text-decoration: line-through;
+}
+
+/* ── Role pills (PIC/SIC/FE next to crew name) ── */
+.role-row {
+  display: flex; align-items: center; gap: 5px; margin-top: 6px;
+  padding-left: 32px;
+}
+.role-pill {
+  padding: 4px 10px; border-radius: 3px; font-size: 12px; font-weight: 700;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px;
+}
+.role-pill:active { background: var(--surface-hover); }
+.role-pill.selected {
+  background: var(--accent-glow2); border-color: var(--accent); color: var(--accent-light);
+}
+.role-pill.taken {
   opacity: 0.25; pointer-events: none; text-decoration: line-through;
 }
 
@@ -393,8 +414,8 @@ body {
   flex-shrink: 0;
 }
 .kb-nav-btn {
-  width: 44px; height: 44px; border-radius: 4px; border: 1px solid var(--border);
-  background: var(--bg); color: var(--text); font-size: 16px;
+  width: 56px; height: 56px; border-radius: 8px; border: 2px solid var(--accent);
+  background: var(--accent-glow); color: var(--accent-light); font-size: 22px; font-weight: 700;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 .kb-nav-btn:active { background: var(--surface-hover); }
@@ -454,23 +475,9 @@ body {
   </div>
 </div>
 
-<!-- Step 2: Crew -->
-<div class="section hidden" id="crew-section">
-  <div class="section-title"><span class="step-num">2</span> Crew</div>
-  <div class="crew-grid" id="crew-grid"></div>
-  <input type="text" class="extra-input" id="extra-crew"
-    placeholder="Additional names (comma-separated)">
-</div>
-
-<!-- Step 3: Forms per crew -->
-<div class="section hidden" id="forms-section">
-  <div class="section-title"><span class="step-num">3</span> Forms</div>
-  <div id="crew-forms"></div>
-</div>
-
-<!-- Step 4: Details -->
+<!-- Step 2: Details -->
 <div class="section hidden" id="details-section">
-  <div class="section-title"><span class="step-num">4</span> Details</div>
+  <div class="section-title"><span class="step-num">2</span> Details</div>
   <div class="input-row">
     <div class="field">
       <label>Date</label>
@@ -489,6 +496,24 @@ body {
       <input type="text" class="text-input" id="input-fire" placeholder="e.g., Treeline">
     </div>
   </div>
+  <div style="margin-top: 8px;">
+    <label style="font-size:13px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;display:block;margin-bottom:6px;">Legs</label>
+    <div class="legs-row" id="global-legs"></div>
+  </div>
+</div>
+
+<!-- Step 3: Crew -->
+<div class="section hidden" id="crew-section">
+  <div class="section-title"><span class="step-num">3</span> Crew</div>
+  <div class="crew-grid" id="crew-grid"></div>
+  <input type="text" class="extra-input" id="extra-crew"
+    placeholder="Additional names (comma-separated)">
+</div>
+
+<!-- Step 4: Forms per crew -->
+<div class="section hidden" id="forms-section">
+  <div class="section-title"><span class="step-num">4</span> Forms</div>
+  <div id="crew-forms"></div>
 </div>
 
 <!-- Step 5: Recording -->
@@ -600,22 +625,14 @@ const TAILS = {
   ]
 };
 
-const ALL_FORMS = [
-  "Exhibit 19","OPC PIC","OPC SIC","OPC FE",
-  "Line Check PIC","Line Check SIC","Line Check FE"
-];
-const FE_FORMS = ["OPC FE", "Line Check FE"];
-
-function getVisibleForms() {
-  if (selectedAC === "C-130") return ALL_FORMS;
-  return ALL_FORMS.filter(f => !FE_FORMS.includes(f));
-}
+const SIMPLE_FORMS = ["Exhibit 19", "OPC", "Line Check"];
 
 // ── State ──
 let selectedAC = null;
 let selectedCrew = new Set();
 let crewForms = {};
-let crewLegs = {};
+let crewRoles = {};   // name -> "PIC" | "SIC" | "FE" | null
+let selectedLegs = []; // global legs for the whole debrief
 
 // ── Aircraft selection ──
 document.querySelectorAll('#aircraft-pills .pill').forEach(pill => {
@@ -625,25 +642,73 @@ document.querySelectorAll('#aircraft-pills .pill').forEach(pill => {
     selectedAC = pill.dataset.ac;
     selectedCrew.clear();
     crewForms = {};
-    crewLegs = {};
+    crewRoles = {};
+    selectedLegs = [];
     renderCrew();
+    renderGlobalLegs();
     renderTails();
+    document.getElementById('details-section').classList.remove('hidden');
     document.getElementById('crew-section').classList.remove('hidden');
     document.getElementById('forms-section').classList.add('hidden');
-    document.getElementById('details-section').classList.add('hidden');
     document.getElementById('preview-section').classList.add('hidden');
     updateButtons();
   });
 });
 
+function getAvailableRoles() {
+  if (selectedAC === 'C-130') return ['PIC', 'SIC', 'FE'];
+  if (selectedAC === 'CE-550/560') return ['PIC'];
+  return ['PIC', 'SIC'];
+}
+
 function renderCrew() {
   const grid = document.getElementById('crew-grid');
   grid.innerHTML = '';
+  const roles = getAvailableRoles();
+
+  // Build taken roles map
+  const takenRoles = {};
+  selectedCrew.forEach(name => {
+    if (crewRoles[name]) takenRoles[crewRoles[name]] = name;
+  });
+
   (CREW[selectedAC] || []).forEach(name => {
     const item = document.createElement('div');
     item.className = 'crew-item';
-    item.innerHTML = `<div class="crew-check">&#10003;</div><span>${name}</span>`;
-    item.addEventListener('click', () => toggleCrew(name, item));
+    if (selectedCrew.has(name)) item.classList.add('checked');
+
+    const top = document.createElement('div');
+    top.className = 'crew-top';
+    top.innerHTML = `<div class="crew-check">&#10003;</div><span>${name}</span>`;
+    top.addEventListener('click', () => toggleCrew(name));
+    item.appendChild(top);
+
+    // Show role pills when checked
+    if (selectedCrew.has(name)) {
+      const roleRow = document.createElement('div');
+      roleRow.className = 'role-row';
+      roles.forEach(role => {
+        const pill = document.createElement('div');
+        pill.className = 'role-pill';
+        const isSelected = crewRoles[name] === role;
+        const isTakenByOther = takenRoles[role] && takenRoles[role] !== name;
+        if (isSelected) pill.classList.add('selected');
+        if (isTakenByOther) pill.classList.add('taken');
+        pill.textContent = role;
+        pill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (isTakenByOther) return;
+          crewRoles[name] = crewRoles[name] === role ? null : role;
+          renderCrew();
+          renderForms();
+          updatePreview();
+          updateButtons();
+        });
+        roleRow.appendChild(pill);
+      });
+      item.appendChild(roleRow);
+    }
+
     grid.appendChild(item);
   });
 }
@@ -659,18 +724,17 @@ function renderTails() {
   });
 }
 
-function toggleCrew(name, el) {
+function toggleCrew(name) {
   if (selectedCrew.has(name)) {
     selectedCrew.delete(name);
-    el.classList.remove('checked');
     delete crewForms[name];
-    delete crewLegs[name];
+    delete crewRoles[name];
   } else {
     selectedCrew.add(name);
-    el.classList.add('checked');
     crewForms[name] = [];
-    crewLegs[name] = [];
+    crewRoles[name] = null;
   }
+  renderCrew();
   renderForms();
   updatePreview();
   updateButtons();
@@ -682,9 +746,10 @@ document.getElementById('extra-crew').addEventListener('change', function() {
     if (!selectedCrew.has(name)) {
       selectedCrew.add(name);
       crewForms[name] = [];
-      crewLegs[name] = [];
+      crewRoles[name] = null;
     }
   });
+  renderCrew();
   renderForms();
   updatePreview();
   updateButtons();
@@ -695,49 +760,29 @@ function renderForms() {
   container.innerHTML = '';
   if (selectedCrew.size === 0) {
     document.getElementById('forms-section').classList.add('hidden');
-    document.getElementById('details-section').classList.add('hidden');
     document.getElementById('preview-section').classList.add('hidden');
     return;
   }
   document.getElementById('forms-section').classList.remove('hidden');
-  document.getElementById('details-section').classList.remove('hidden');
   document.getElementById('preview-section').classList.remove('hidden');
 
-  const visibleForms = getVisibleForms();
-
-  // Build set of role-specific forms already claimed by another crew member
-  // "Exhibit 19" is exempt — multiple crew can have it
-  const ROLE_FORMS = new Set(["OPC PIC","OPC SIC","OPC FE","Line Check PIC","Line Check SIC","Line Check FE"]);
-  const takenForms = {};  // form -> owner name
   selectedCrew.forEach(name => {
-    (crewForms[name] || []).forEach(f => {
-      if (ROLE_FORMS.has(f)) takenForms[f] = name;
-    });
-  });
-
-  selectedCrew.forEach(name => {
-    if (crewForms[name]) {
-      crewForms[name] = crewForms[name].filter(f => visibleForms.includes(f));
-    }
     const row = document.createElement('div');
     row.className = 'crew-form-row';
     const nameDiv = document.createElement('div');
     nameDiv.className = 'name';
-    nameDiv.textContent = name;
+    const role = crewRoles[name];
+    nameDiv.textContent = name + (role ? ' (' + role + ')' : '');
     row.appendChild(nameDiv);
 
     const tagsDiv = document.createElement('div');
     tagsDiv.className = 'form-tags';
-    visibleForms.forEach(form => {
+    SIMPLE_FORMS.forEach(form => {
       const tag = document.createElement('div');
       tag.className = 'form-tag';
-      const isSelected = (crewForms[name] || []).includes(form);
-      const isTakenByOther = ROLE_FORMS.has(form) && takenForms[form] && takenForms[form] !== name;
-      if (isSelected) tag.classList.add('selected');
-      if (isTakenByOther) tag.classList.add('taken');
+      if ((crewForms[name] || []).includes(form)) tag.classList.add('selected');
       tag.textContent = form;
       tag.addEventListener('click', () => {
-        if (isTakenByOther) return;  // blocked — already assigned to another crew member
         if (!crewForms[name]) crewForms[name] = [];
         const idx = crewForms[name].indexOf(form);
         if (idx >= 0) {
@@ -745,45 +790,41 @@ function renderForms() {
         } else {
           crewForms[name].push(form);
         }
-        renderForms();  // re-render to update taken states for all crew
         updatePreview();
         updateButtons();
+        renderForms();
       });
       tagsDiv.appendChild(tag);
     });
     row.appendChild(tagsDiv);
 
-    const legsRow = document.createElement('div');
-    legsRow.className = 'legs-row';
-    const legsLabel = document.createElement('span');
-    legsLabel.className = 'legs-label';
-    legsLabel.textContent = 'Legs:';
-    legsRow.appendChild(legsLabel);
-    for (let leg = 1; leg <= 12; leg++) {
-      const legBtn = document.createElement('div');
-      legBtn.className = 'leg-btn';
-      if ((crewLegs[name] || []).includes(leg)) legBtn.classList.add('selected');
-      legBtn.textContent = leg;
-      legBtn.addEventListener('click', () => {
-        if (!crewLegs[name]) crewLegs[name] = [];
-        const idx = crewLegs[name].indexOf(leg);
-        if (idx >= 0) {
-          crewLegs[name].splice(idx, 1);
-          legBtn.classList.remove('selected');
-        } else {
-          crewLegs[name].push(leg);
-          crewLegs[name].sort();
-          legBtn.classList.add('selected');
-        }
-        updatePreview();
-        updateButtons();
-      });
-      legsRow.appendChild(legBtn);
-    }
-    row.appendChild(legsRow);
-
     container.appendChild(row);
   });
+}
+
+// ── Global legs renderer ──
+function renderGlobalLegs() {
+  const container = document.getElementById('global-legs');
+  container.innerHTML = '';
+  for (let leg = 1; leg <= 12; leg++) {
+    const legBtn = document.createElement('div');
+    legBtn.className = 'leg-btn';
+    if (selectedLegs.includes(leg)) legBtn.classList.add('selected');
+    legBtn.textContent = leg;
+    legBtn.addEventListener('click', () => {
+      const idx = selectedLegs.indexOf(leg);
+      if (idx >= 0) {
+        selectedLegs.splice(idx, 1);
+      } else {
+        selectedLegs.push(leg);
+        selectedLegs.sort((a, b) => a - b);
+      }
+      renderGlobalLegs();
+      updatePreview();
+      updateButtons();
+    });
+    container.appendChild(legBtn);
+  }
 }
 
 function getInstructorName() {
@@ -792,8 +833,17 @@ function getInstructorName() {
   return sel.options[sel.selectedIndex].text;
 }
 
+function formatDate(isoDate) {
+  if (!isoDate) return '';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const parts = isoDate.split('-');
+  if (parts.length !== 3) return isoDate;
+  return months[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10);
+}
+
 function buildBody() {
-  const date = document.getElementById('input-date').value.trim();
+  const rawDate = document.getElementById('input-date').value.trim();
+  const date = formatDate(rawDate);
   const tail = document.getElementById('input-tail').value.trim();
   const fire = document.getElementById('input-fire').value.trim();
 
@@ -812,14 +862,19 @@ function buildBody() {
   selectedCrew.forEach(name => {
     const forms = crewForms[name] || [];
     if (forms.length > 0) {
-      let line = name + ' - ' + forms.join(', ');
-      const legs = crewLegs[name] || [];
-      if (legs.length > 0) {
-        line += ' (Legs ' + legs.join(', ') + ')';
-      }
+      const role = crewRoles[name];
+      // Expand simplified forms: "OPC" → "OPC PIC", "Line Check" → "Line Check SIC", etc.
+      const displayForms = forms.map(f => {
+        if (f === 'Exhibit 19') return f;
+        return role ? f + ' ' + role : f;
+      });
+      let line = name + (role ? ' (' + role + ')' : '') + ' - ' + displayForms.join(', ');
       lines.push(line);
     }
   });
+  if (selectedLegs.length > 0) {
+    lines.push('Legs: ' + selectedLegs.join(', '));
+  }
   if (date) lines.push('Date: ' + date);
   if (tail) lines.push('Aircraft: ' + tail);
   if (fire) lines.push('Fire: ' + fire);
@@ -834,12 +889,13 @@ function updatePreview() {
 function updateButtons() {
   const crewWithForms = Array.from(selectedCrew).filter(n => (crewForms[n] || []).length > 0);
   const hasContent = crewWithForms.length > 0;
-  const allHaveLegs = hasContent && crewWithForms.every(n => (crewLegs[n] || []).length > 0);
+  const hasLegs = selectedLegs.length > 0;
+  const allHaveRoles = hasContent && crewWithForms.every(n => !!crewRoles[n]);
   const hasInstructor = !!document.getElementById('instructor-select').value;
-  document.getElementById('btn-submit').disabled = !(hasContent && allHaveLegs && hasInstructor);
-  // Show audio section when details are visible
-  const detailsVisible = !document.getElementById('details-section').classList.contains('hidden');
-  if (detailsVisible) {
+  document.getElementById('btn-submit').disabled = !(hasContent && hasLegs && allHaveRoles && hasInstructor);
+  // Show audio section when crew section is visible (aircraft has been selected)
+  const crewVisible = !document.getElementById('crew-section').classList.contains('hidden');
+  if (crewVisible) {
     document.getElementById('audio-section').classList.remove('hidden');
   } else {
     document.getElementById('audio-section').classList.add('hidden');
@@ -852,8 +908,12 @@ function updateButtons() {
 
 (function() {
   const now = new Date();
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('input-date').value = months[now.getMonth()] + ' ' + now.getDate();
+  // Native date input needs YYYY-MM-DD format
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  document.getElementById('input-date').value = yyyy + '-' + mm + '-' + dd;
+  renderGlobalLegs();
   updatePreview();
 })();
 
@@ -1011,25 +1071,19 @@ let kbCards = [];
 let kbIndex = 0;
 
 function getSelectedFormTypes() {
+  // Expand simplified forms to role-specific KB_DATA keys
   const forms = new Set();
   selectedCrew.forEach(name => {
-    (crewForms[name] || []).forEach(f => forms.add(f));
+    const role = crewRoles[name];
+    (crewForms[name] || []).forEach(f => {
+      if (f === 'Exhibit 19') {
+        forms.add('Exhibit 19');
+      } else if (role) {
+        forms.add(f + ' ' + role);  // "OPC" + "PIC" → "OPC PIC"
+      }
+    });
   });
   return Array.from(forms);
-}
-
-function buildIntroCard() {
-  return {
-    title: 'Debrief Tips',
-    html: '<div class="kb-tips"><div class="kb-tips-title">How to give a great debrief</div>' +
-      '<div>\u2022 Name the crew member when giving feedback</div>' +
-      '<div>\u2022 Be specific \u2014 speeds, altitudes, drop numbers</div>' +
-      '<div>\u2022 Describe what you saw \u2014 the AI handles scoring</div>' +
-      '<div>\u2022 Only mention what needs discussion or coaching</div>' +
-      '<div>\u2022 If something went well, say so briefly</div>' +
-      '<div>\u2022 Skip topics with nothing to discuss</div></div>' +
-      '<div class="kb-note">Swipe through the cards for topic prompts on each form type.</div>'
-  };
 }
 
 function buildFormCard(formType) {
@@ -1052,11 +1106,17 @@ function buildFormCard(formType) {
 
 function showKneeboard() {
   const formTypes = getSelectedFormTypes();
-  kbCards = [buildIntroCard()];
+  kbCards = [];
   formTypes.forEach(function(ft) {
     var card = buildFormCard(ft);
     if (card) kbCards.push(card);
   });
+  if (kbCards.length === 0) {
+    // Fallback if no forms selected — show Exhibit 19 by default
+    var fallback = buildFormCard('Exhibit 19');
+    if (fallback) kbCards.push(fallback);
+  }
+  if (kbCards.length === 0) return; // nothing to show
   kbIndex = 0;
   renderKneeboardCard();
   document.getElementById('kb-overlay').classList.remove('hidden');
@@ -1078,9 +1138,15 @@ function renderKneeboardCard() {
   if (card.subtitle) html += '<div class="kb-card-subtitle">' + card.subtitle + '</div>';
   html += card.html;
   container.innerHTML = html;
-  document.getElementById('kb-page').textContent = (kbIndex + 1) + ' of ' + kbCards.length;
+  document.getElementById('kb-page').textContent = card.title + ' \u2014 ' + (kbIndex + 1) + ' of ' + kbCards.length;
   document.getElementById('kb-prev').disabled = kbIndex === 0;
   document.getElementById('kb-next').disabled = kbIndex === kbCards.length - 1;
+  // Show swipe hint on first card if multiple cards
+  if (kbIndex === 0 && kbCards.length > 1) {
+    document.getElementById('kb-next').style.animation = 'kb-pulse 1.5s ease-in-out 3';
+  } else {
+    document.getElementById('kb-next').style.animation = '';
+  }
   var dots = document.getElementById('kb-dots');
   dots.innerHTML = kbCards.map(function(_, i) {
     return '<span class="kb-dot' + (i === kbIndex ? ' active' : '') + '"></span>';
