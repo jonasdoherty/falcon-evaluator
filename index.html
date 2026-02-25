@@ -745,7 +745,20 @@ function getInstructorName() {
 }
 
 function buildBody() {
-  let lines = ['Send to: coulson.falcon@outlook.com', 'Subject: Debrief Recording', ''];
+  const date = document.getElementById('input-date').value.trim();
+  const tail = document.getElementById('input-tail').value.trim();
+  const fire = document.getElementById('input-fire').value.trim();
+
+  // First line becomes the email subject on iOS
+  const subjectParts = ['Debrief'];
+  if (tail) subjectParts.push(tail);
+  if (fire) subjectParts.push(fire);
+  if (date) subjectParts.push(date);
+
+  let lines = [subjectParts.join(' — ')];
+  lines.push('Send to: coulson.falcon@outlook.com');
+  lines.push('');
+
   const instructor = getInstructorName();
   if (instructor) lines.push('Instructor: ' + instructor);
   selectedCrew.forEach(name => {
@@ -759,9 +772,6 @@ function buildBody() {
       lines.push(line);
     }
   });
-  const date = document.getElementById('input-date').value.trim();
-  const tail = document.getElementById('input-tail').value.trim();
-  const fire = document.getElementById('input-fire').value.trim();
   if (date) lines.push('Date: ' + date);
   if (tail) lines.push('Aircraft: ' + tail);
   if (fire) lines.push('Fire: ' + fire);
