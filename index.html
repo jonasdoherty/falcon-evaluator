@@ -745,7 +745,7 @@ function getInstructorName() {
 }
 
 function buildBody() {
-  let lines = [];
+  let lines = ['Send to: coulson.falcon@outlook.com', ''];
   const instructor = getInstructorName();
   if (instructor) lines.push('Instructor: ' + instructor);
   selectedCrew.forEach(name => {
@@ -862,8 +862,8 @@ const KB_DATA = {
     meta: "PIC & SIC (same form) — 30 topics",
     sections: [
       ["I — Preflight Knowledge", "Records/Certs/Documents, Incident Organization, Mission Weather/Incident/Flight Info, Special Use Mission Equipment (RADS/Tank), FM Radio Operation, GPS Operation, Initial Dispatch Processing"],
-      ["II — Enroute", "Flight Following"],
-      ["III — Mountain / Low Level", "Terrain Avoidance, Below 500' AGL"],
+      ["II — Enroute", "Flight Following, Airspace/TFR Awareness, Fuel Planning & Management, Weather Assessment En Route, Comm Handoffs"],
+      ["III — Mountain / Low Level", "Terrain Avoidance, Below 500' AGL, Escape Route Planning, Wire/Obstacle Awareness, Wind Shear/Turbulence/Downdrafts, Smoke & Visibility at Low Level"],
       ["V — Tactical Coordination", "Lead Plane Integration (following lead's line, show-me passes, comms), Multi-Aircraft Deconfliction (sequencing, orbit/hold discipline, traffic awareness), Air Attack/ATGS Coordination (taking direction, requesting clarification)"],
       ["VI — Fire Airspace", "FTA Procedures, On Scene/Over-Incident Procedures, Fire Knowledge"],
       ["VIII — Airtanker Ops", "Tanker Ground Ops, Maneuvering & Drop Procedures, Emergency/Abnormal Ops, SAFECOM"],
