@@ -949,25 +949,16 @@ function getSelectedFormTypes() {
 }
 
 function buildIntroCard() {
-  const date = document.getElementById('input-date').value.trim() || '[DATE]';
-  const tail = document.getElementById('input-tail').value.trim() || '[AIRCRAFT]';
-  const fire = document.getElementById('input-fire').value.trim() || '[FIRE NAME]';
-  let crewLines = [];
-  selectedCrew.forEach(name => {
-    const forms = crewForms[name] || [];
-    if (forms.length) crewLines.push('<strong>' + name + '</strong>: ' + forms.join(', '));
-  });
   return {
-    title: 'Start Your Debrief',
-    html: '<div class="kb-prompt">"We are debriefing the flight that took place on <strong>' + date +
-      '</strong> in <strong>' + tail + '</strong> over the <strong>' + fire + '</strong>."</div>' +
-      '<div class="kb-hint">State crew names, roles, and forms:</div>' +
-      '<div class="kb-crew-list">' + crewLines.join('<br>') + '</div>' +
-      '<div class="kb-tips"><div class="kb-tips-title">Tips</div>' +
-      '<div>\u2022 Name crew members when giving feedback</div>' +
-      '<div>\u2022 Be specific: speeds, altitudes, drop numbers</div>' +
-      '<div>\u2022 Skip topics with nothing to discuss</div>' +
-      '<div>\u2022 The AI handles all scoring \u2014 just describe what you saw</div></div>'
+    title: 'Debrief Tips',
+    html: '<div class="kb-tips"><div class="kb-tips-title">How to give a great debrief</div>' +
+      '<div>\u2022 Name the crew member when giving feedback</div>' +
+      '<div>\u2022 Be specific \u2014 speeds, altitudes, drop numbers</div>' +
+      '<div>\u2022 Describe what you saw \u2014 the AI handles scoring</div>' +
+      '<div>\u2022 Only mention what needs discussion or coaching</div>' +
+      '<div>\u2022 If something went well, say so briefly</div>' +
+      '<div>\u2022 Skip topics with nothing to discuss</div></div>' +
+      '<div class="kb-note">Swipe through the cards for topic prompts on each form type.</div>'
   };
 }
 
