@@ -745,7 +745,7 @@ function getInstructorName() {
 }
 
 function buildBody() {
-  let lines = ['Send to: coulson.falcon@outlook.com', ''];
+  let lines = ['Send to: coulson.falcon@outlook.com', 'Subject: Debrief Recording', ''];
   const instructor = getInstructorName();
   if (instructor) lines.push('Instructor: ' + instructor);
   selectedCrew.forEach(name => {
