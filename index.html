@@ -134,6 +134,9 @@ body {
 .form-tag.selected {
   background: var(--green); border-color: var(--green-light); color: #fff;
 }
+.form-tag.taken {
+  opacity: 0.25; pointer-events: none; text-decoration: line-through;
+}
 
 /* ── Leg selector ── */
 .legs-row {
@@ -701,6 +704,17 @@ function renderForms() {
   document.getElementById('preview-section').classList.remove('hidden');
 
   const visibleForms = getVisibleForms();
+
+  // Build set of role-specific forms already claimed by another crew member
+  // "Exhibit 19" is exempt — multiple crew can have it
+  const ROLE_FORMS = new Set(["OPC PIC","OPC SIC","OPC FE","Line Check PIC","Line Check SIC","Line Check FE"]);
+  const takenForms = {};  // form -> owner name
+  selectedCrew.forEach(name => {
+    (crewForms[name] || []).forEach(f => {
+      if (ROLE_FORMS.has(f)) takenForms[f] = name;
+    });
+  });
+
   selectedCrew.forEach(name => {
     if (crewForms[name]) {
       crewForms[name] = crewForms[name].filter(f => visibleForms.includes(f));
@@ -717,18 +731,21 @@ function renderForms() {
     visibleForms.forEach(form => {
       const tag = document.createElement('div');
       tag.className = 'form-tag';
-      if ((crewForms[name] || []).includes(form)) tag.classList.add('selected');
+      const isSelected = (crewForms[name] || []).includes(form);
+      const isTakenByOther = ROLE_FORMS.has(form) && takenForms[form] && takenForms[form] !== name;
+      if (isSelected) tag.classList.add('selected');
+      if (isTakenByOther) tag.classList.add('taken');
       tag.textContent = form;
       tag.addEventListener('click', () => {
+        if (isTakenByOther) return;  // blocked — already assigned to another crew member
         if (!crewForms[name]) crewForms[name] = [];
         const idx = crewForms[name].indexOf(form);
         if (idx >= 0) {
           crewForms[name].splice(idx, 1);
-          tag.classList.remove('selected');
         } else {
           crewForms[name].push(form);
-          tag.classList.add('selected');
         }
+        renderForms();  // re-render to update taken states for all crew
         updatePreview();
         updateButtons();
       });
